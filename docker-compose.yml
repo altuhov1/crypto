@@ -1,0 +1,118 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${MAIN_USER_DB_PG}
+      POSTGRES_PASSWORD: ${DB_PG_PASSWORD}
+      POSTGRES_DB: ${DB_PG_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - internal
+
+  mongodb:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: cryptodb
+    volumes:
+      - mongodb_data:/data/db
+      - ./docker/mongodb/init-scripts:/docker-entrypoint-initdb.d:ro
+      - mongodb_logs:/var/log/mongodb
+    command: >
+      mongod --quiet --logpath /var/log/mongodb/mongod.log --logappend
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - internal
+
+  redis:
+    image: redis:8.2-alpine
+    command: redis-server --appendonly yes --requirepass redispassword
+    volumes:
+      - redis_data:/data
+      - redis_logs:/var/log/redis
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "redispassword", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - internal
+    
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrate
+    environment:
+      DB_PG_HOST: ${DB_PG_HOST}
+      USER_DB_PG: ${MAIN_USER_DB_PG}
+      PASS_DB_PG: ${DB_PG_PASSWORD}
+      NAME_DB_PG: ${DB_PG_NAME}
+      APP_USER: ${DB_PG_USER}
+      APP_PASSWORD: ${DB_PG_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["up"]
+    networks:
+      - internal
+  
+
+  app:
+    networks:
+      - internal
+      - public
+    build:
+      context: .
+      dockerfile: Dockerfile.golang
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "3000:8080"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./static:/usr/share/caddy
+      - caddy_data:/data      
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    depends_on:
+      - app
+    networks:
+      - internal
+      - public
+
+networks:
+  internal:
+    internal: true
+  public:
+
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  caddy_logs:
+  mongodb_logs:
+  redis_data:
+  redis_logs:
+  caddy_data: 
+  caddy_config: 
