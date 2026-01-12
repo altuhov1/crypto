@@ -15,21 +15,6 @@ services:
       start_period: 10s
     networks:
       - internal
-
-
-  redis:
-    image: redis:8.2-alpine
-    command: redis-server --appendonly yes --requirepass redispassword
-    volumes:
-      - redis_data:/data
-      - redis_logs:/var/log/redis
-    healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "redispassword", "ping" ]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-    networks:
-      - internal
     
   migrate:
     build:
