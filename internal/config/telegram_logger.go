@@ -29,7 +29,6 @@ func (h *telegramHandler) Handle(_ context.Context, r slog.Record) error {
 		return nil
 	}
 
-	// Формируем базовое сообщение
 	var msg strings.Builder
 	moscowLoc, err := time.LoadLocation("Europe/Moscow")
 	if err != nil {
