@@ -16,26 +16,6 @@ services:
     networks:
       - internal
 
-  mongodb:
-    image: mongo:7
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-      MONGO_INITDB_DATABASE: cryptodb
-    volumes:
-      - mongodb_data:/data/db
-      - ./docker/mongodb/init-scripts:/docker-entrypoint-initdb.d:ro
-      - mongodb_logs:/var/log/mongodb
-    command: >
-      mongod --quiet --logpath /var/log/mongodb/mongod.log --logappend
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-    networks:
-      - internal
 
   redis:
     image: redis:8.2-alpine
