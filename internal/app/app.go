@@ -70,11 +70,7 @@ func (a *App) setupRoutes(handler *api.Handler) http.Handler {
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// API routes
-	apiRoutes := map[string]http.HandlerFunc{
-		"/api/loadUnfinishedWork": handler.LoadUnfinishedWork,
-		"/api/saveNewUrls":        handler.SaveNewUrls,
-		"/api/loadUrls":           handler.LoadUrls,
-	}
+	apiRoutes := map[string]http.HandlerFunc{}
 
 	for path, handlerFunc := range apiRoutes {
 		mux.HandleFunc(path, handlerFunc)
